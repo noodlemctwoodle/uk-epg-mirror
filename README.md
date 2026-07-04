@@ -1,4 +1,4 @@
-# uk-epg-mirror
+# epg-guide
 
 A single, self-contained XMLTV EPG builder. All the code needed to build the
 guide lives in this repo — nothing is cloned from other repositories at
@@ -9,7 +9,7 @@ Release asset (stable URL, no git-history bloat).
 
 One combined, gzipped guide at a stable URL:
 
-- `https://github.com/noodlemctwoodle/uk-epg-mirror/releases/latest/download/guide.xml.gz`
+- `https://github.com/noodlemctwoodle/epg-guide/releases/latest/download/guide.xml.gz`
 
 Point your EPG source (e.g. Dispatcharr) at that URL. It auto-detects gzip.
 Channels are matched by their `tvg-id` / display name.
