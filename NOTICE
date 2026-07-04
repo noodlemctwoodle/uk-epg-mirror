@@ -1,0 +1,20 @@
+This project vendors and adapts code from:
+
+  Freeview-EPG
+  https://github.com/dp247/Freeview-EPG
+  Copyright (c) dp247 and contributors
+  Licensed under the GNU General Public License v3.0
+
+The following are derived from that project and remain under GPLv3:
+  - src/config.py, src/http.py, src/dedupe.py, src/xmltv.py
+  - src/providers/ (base, sky, freeview, freesat, radiotimes, youview)
+  - channels.json (channel definitions)
+
+Modifications in this repository:
+  - main.py rewritten to emit a single guide.xml and merge external guides
+  - src/merge.py added (merges Rytec UK/Ireland XMLTV via stdlib lzma)
+  - GitHub Actions workflow to build and publish on a schedule
+
+External data merged at build time:
+  Rytec UK/Ireland XMLTV guides — http://www.xmltvepg.nl/
+  (programme data © respective broadcasters; reformatted only)
