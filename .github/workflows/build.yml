@@ -21,9 +21,7 @@ jobs:
           - pluto.tv
           - plex.tv
           - xumo.tv
-          - tvtv.us
           - web.magentatv.de
-          - sky.de
           - guidatv.sky.it
           - tv.sfr.fr
           - movistarplus.es
@@ -32,13 +30,12 @@ jobs:
           - cosmotetv.gr
           - programtv.onet.pl
           - programetv.ro
-          - jiotv.com
           - tataplay.com
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - name: Install engine
         working-directory: engine
         run: npm ci
@@ -49,7 +46,7 @@ jobs:
           mkdir -p dist
           npm run grab -- --sites=${{ matrix.site }} --days=3 --maxConnections=15 --timeout=45000 --output=dist/${{ matrix.site }}.xml
       - name: Upload guide
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: part-${{ matrix.site }}
           path: engine/dist/${{ matrix.site }}.xml
@@ -62,15 +59,15 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Download international guides
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: intl_guides
           pattern: part-*
@@ -83,7 +80,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add guide.xml guide.xml.gz
+          # Only commit the gzipped guide — the raw guide.xml can exceed
+          # GitHub's 100 MB per-file limit. Dispatcharr auto-detects gzip.
+          git add guide.xml.gz
           git diff --cached --quiet && echo "No changes" && exit 0
           git commit -m "Update guide $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git pull --rebase --autostash
