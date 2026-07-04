@@ -13,6 +13,7 @@ jobs:
   # A failed/blocked scraper simply contributes nothing (non-fatal).
   intl:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
