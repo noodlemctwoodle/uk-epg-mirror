@@ -33,6 +33,7 @@ from src.config import load_channels
 from src.dedupe import dedupe_programmes
 from src.http import make_session
 from src.merge import merge_external, merge_local_dir
+from src.rekey import rekey, load_json
 from src.xmltv import build_xmltv, write_atomic
 from src.providers import sky, freeview, freesat, radiotimes, youview
 from src.providers.base import Context
@@ -89,6 +90,14 @@ def main() -> None:
     intl_dir = os.environ.get("INTL_GUIDES_DIR", "intl_guides")
     loc_ch, loc_pr = merge_local_dir(root, intl_dir)
     logger.info("Merged %d international channels and %d international programmes", loc_ch, loc_pr)
+
+    # Re-key the guide to the IPTV service's own channel ids/names so any
+    # player on the same service matches by exact tvg-id (no fuzzy matching).
+    provider = load_json("provider_channels.json", [])
+    if provider:
+        aliases = load_json("aliases.json", {})
+        root, matched, total = rekey(root, provider, aliases)
+        logger.info("Re-keyed to service channels: %d/%d matched a source feed", matched, total)
 
     final = etree.tostring(root, pretty_print=True, encoding="utf-8", xml_declaration=True)
     write_atomic(OUTPUT, final)
