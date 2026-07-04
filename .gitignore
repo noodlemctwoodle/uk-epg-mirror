@@ -4,3 +4,4 @@ __pycache__/
 *.tmp
 guide.xml.tmp
 /guide.xml
+/guide.xml.gz

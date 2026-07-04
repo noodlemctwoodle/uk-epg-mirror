@@ -76,14 +76,14 @@ jobs:
         run: ls -la intl_guides || echo "no intl guides"
       - name: Build guide.xml (UK scrape + Rytec + international)
         run: python main.py
-      - name: Commit guide
+      - name: Publish guide to release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Only commit the gzipped guide — the raw guide.xml can exceed
-          # GitHub's 100 MB per-file limit. Dispatcharr auto-detects gzip.
-          git add guide.xml.gz
-          git diff --cached --quiet && echo "No changes" && exit 0
-          git commit -m "Update guide $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git pull --rebase --autostash
-          git push
+          # Publish as a Release asset (stable URL, no git-history bloat) rather
+          # than committing a ~35MB file every run. The "latest" release is
+          # created once, then the asset is clobbered on each build.
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --title "Latest EPG guide" \
+              --notes "Combined XMLTV guide (UK + Rytec + international). Rebuilt every 12h. Point your EPG source at the guide.xml.gz asset."
+          gh release upload latest guide.xml.gz --clobber
