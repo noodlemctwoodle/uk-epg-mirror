@@ -9,22 +9,75 @@ permissions:
   contents: write
 
 jobs:
+  # ── International guides: one job per source site, run in parallel. ──
+  # A failed/blocked scraper simply contributes nothing (non-fatal).
+  intl:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site:
+          - pluto.tv
+          - plex.tv
+          - xumo.tv
+          - tvtv.us
+          - web.magentatv.de
+          - sky.de
+          - guidatv.sky.it
+          - tv.sfr.fr
+          - movistarplus.es
+          - mi.tv
+          - digea.gr
+          - cosmotetv.gr
+          - programtv.onet.pl
+          - programetv.ro
+          - jiotv.com
+          - tataplay.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install engine
+        working-directory: engine
+        run: npm ci
+      - name: Grab ${{ matrix.site }}
+        working-directory: engine
+        continue-on-error: true
+        run: |
+          mkdir -p dist
+          npm run grab -- --site=${{ matrix.site }} --days=3 --maxConnections=15 --timeout=45000 --output=dist/${{ matrix.site }}.xml
+      - name: Upload guide
+        uses: actions/upload-artifact@v4
+        with:
+          name: part-${{ matrix.site }}
+          path: engine/dist/${{ matrix.site }}.xml
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # ── Build final guide.xml: UK scrape + Rytec + all international guides. ──
   build:
+    needs: intl
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Build guide.xml
+      - name: Download international guides
+        uses: actions/download-artifact@v4
+        with:
+          path: intl_guides
+          pattern: part-*
+          merge-multiple: true
+      - name: List downloaded guides
+        run: ls -la intl_guides || echo "no intl guides"
+      - name: Build guide.xml (UK scrape + Rytec + international)
         run: python main.py
-
       - name: Commit guide
         run: |
           git config user.name "github-actions[bot]"

@@ -31,7 +31,7 @@ from lxml import etree
 from src.config import load_channels
 from src.dedupe import dedupe_programmes
 from src.http import make_session
-from src.merge import merge_external
+from src.merge import merge_external, merge_local_dir
 from src.xmltv import build_xmltv, write_atomic
 from src.providers import sky, freeview, freesat, radiotimes, youview
 from src.providers.base import Context
@@ -75,7 +75,13 @@ def main() -> None:
     xml_bytes = build_xmltv(channels, programmes, tz=ctx.tz)
     root = etree.fromstring(xml_bytes, parser=etree.XMLParser(huge_tree=True))
     ext_ch, ext_pr = merge_external(root, session)
-    logger.info("Merged %d external channels and %d external programmes", ext_ch, ext_pr)
+    logger.info("Merged %d Rytec channels and %d Rytec programmes", ext_ch, ext_pr)
+
+    # Fold in international guides produced by the vendored engine (engine/),
+    # collected into ./intl_guides by the workflow (one XMLTV file per site).
+    intl_dir = os.environ.get("INTL_GUIDES_DIR", "intl_guides")
+    loc_ch, loc_pr = merge_local_dir(root, intl_dir)
+    logger.info("Merged %d international channels and %d international programmes", loc_ch, loc_pr)
 
     final = etree.tostring(root, pretty_print=True, encoding="utf-8", xml_declaration=True)
     write_atomic(OUTPUT, final)

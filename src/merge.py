@@ -14,8 +14,10 @@ entries whose ``id`` we already have are skipped so our own (cleaner)
 definitions win.
 """
 
+import glob
 import logging
 import lzma
+import os
 from typing import List
 
 from lxml import etree
@@ -42,6 +44,46 @@ def _parse(data: bytes):
     """Parse XMLTV bytes into a root element, tolerating minor malformations."""
     parser = etree.XMLParser(recover=True, huge_tree=True)
     return etree.fromstring(data, parser=parser)
+
+
+def _append_from_root(base_root, ext_root, existing_ids):
+    """Append <channel>/<programme> from ext_root into base_root; return counts."""
+    ch_added = pr_added = 0
+    for ch in ext_root.findall("channel"):
+        cid = (ch.get("id") or "").lower()
+        if not cid or cid in existing_ids:
+            continue
+        existing_ids.add(cid)
+        base_root.append(ch)
+        ch_added += 1
+    for prog in ext_root.findall("programme"):
+        base_root.append(prog)
+        pr_added += 1
+    return ch_added, pr_added
+
+
+def merge_local_dir(base_root, directory: str):
+    """Merge every ``*.xml`` XMLTV file found (recursively) under ``directory``.
+
+    Used to fold in the international guides produced by the vendored scraper
+    engine (``engine/``) — one file per source site. Missing/empty/broken
+    files are logged and skipped so a single bad grab never fails the build.
+    """
+    if not directory or not os.path.isdir(directory):
+        return 0, 0
+    existing_ids = {(c.get("id") or "").lower() for c in base_root.findall("channel")}
+    total_ch = total_pr = 0
+    for path in sorted(glob.glob(os.path.join(directory, "**", "*.xml"), recursive=True)):
+        try:
+            with open(path, "rb") as f:
+                ext_root = _parse(f.read())
+            ch, pr = _append_from_root(base_root, ext_root, existing_ids)
+            total_ch += ch
+            total_pr += pr
+            logger.info("Merged local %s: +%d channels, +%d programmes", path, ch, pr)
+        except Exception as exc:
+            logger.error("Failed to merge local guide %s: %s", path, exc)
+    return total_ch, total_pr
 
 
 def merge_external(base_root, session, urls: List[str] = None):
