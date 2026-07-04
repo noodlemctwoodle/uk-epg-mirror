@@ -11,7 +11,7 @@ One combined, gzipped guide at a stable URL:
 
 - `https://github.com/noodlemctwoodle/epg-guide/releases/latest/download/guide.xml.gz`
 
-Point your EPG source (e.g. Dispatcharr) at that URL. It auto-detects gzip.
+Point your EPG source at that URL. It auto-detects gzip.
 Channels are matched by their `tvg-id` / display name.
 
 ## How it works
