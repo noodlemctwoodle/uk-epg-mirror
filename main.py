@@ -24,6 +24,7 @@ Set ``LOGLEVEL`` (e.g. ``LOGLEVEL=DEBUG``) to change verbosity.
 import gzip
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import pytz
 from lxml import etree
@@ -54,19 +55,25 @@ def main() -> None:
     session = make_session()
     ctx = Context(session=session, tz=pytz.timezone("Europe/London"), days=7, caches={})
 
-    programmes = []
-    for channel in channels:
+    def fetch_one(channel):
         fetcher = FETCHERS.get(channel.get("src"))
         if fetcher is None:
-            logger.warning(
-                "Unknown source '%s' for channel %s; skipping.",
-                channel.get("src"), channel.get("name"),
-            )
-            continue
+            logger.warning("Unknown source '%s' for channel %s; skipping.",
+                           channel.get("src"), channel.get("name"))
+            return []
         try:
-            programmes.extend(fetcher(channel, ctx))
+            return fetcher(channel, ctx)
         except Exception as exc:
             logger.error("Error fetching %s: %s", channel.get("name"), exc)
+            return []
+
+    # Fetch channels concurrently — the scrape is I/O-bound (one HTTP GET per
+    # channel per day) so a thread pool cuts wall-clock from ~18 min to a few.
+    programmes = []
+    workers = int(os.environ.get("SCRAPE_WORKERS", "12"))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for result in pool.map(fetch_one, channels):
+            programmes.extend(result)
 
     programmes = dedupe_programmes(programmes)
     logger.info("Scraped %d programmes across %d channels", len(programmes), len(channels))
